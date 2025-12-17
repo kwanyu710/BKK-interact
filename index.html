@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2025 曼谷聖誕跨年 | 泰廢了 Elite Edition</title>
+    <title>2025 曼谷聖誕跨年 | 泰廢了 Elite Edition (V2)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -154,7 +154,7 @@
 </div>
 
 <script>
-    // --- Data Source (Enriched from original HTML) ---
+    // --- Data Source (Updated for DMK) ---
     const ITINERARY_DATA = [
         { 
             day: 1, date: "12/23 (二)", title: "抵達曼谷", 
@@ -201,7 +201,7 @@
                 { id: "s20", time: "10:00", name: "恰圖恰市集", type: "shopping", lat: 13.7999, lng: 100.5508, cost_t: 0, cost_f: 200, desc: "世界最大週末市集", open: "09:00-18:00" },
                 { id: "s21", time: "15:00", name: "Big C 拉差丹利", type: "shopping", lat: 13.7466, lng: 100.5408, cost_t: 0, cost_f: 0, desc: "伴手禮最後掃貨", open: "09:00-23:00" },
                 { id: "s22", time: "19:00", name: "Krua Khun Puk", type: "food", lat: 13.7408, lng: 100.5562, cost_t: 0, cost_f: 300, desc: "Nana 站人氣熱炒", open: "16:00-04:00", link: "https://www.google.com/maps" },
-                { id: "s23", time: "Flight", name: "前往機場 (BKK)", type: "transport", lat: 13.6900, lng: 100.7501, cost_t: 100, cost_f: 0, desc: "預備返台" }
+                { id: "s23", time: "Flight", name: "前往機場 (DMK)", type: "transport", lat: 13.9132, lng: 100.6042, cost_t: 100, cost_f: 0, desc: "預備返台 (廊曼機場)" }
             ]
         }
     ];
@@ -226,7 +226,7 @@
         
         // Elegant Styled Tiles (CartoDB Voyager)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
