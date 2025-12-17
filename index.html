@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2025 曼谷聖誕跨年 | 泰廢了 Elite Edition (Google Maps V3)</title>
+    <title>2025 曼谷聖誕跨年 | 泰廢了 Elite Edition (V5 Font Update)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap&libraries=geometry" async defer></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -23,13 +26,13 @@
                         'fog-blue': '#7B9EB2',
                         'fog-dark': '#5A7A8C',
                         'warm-gold': '#C6A568',
-                        'charcoal': '#2C3E50',
+                        'charcoal': '#4A4A4A', /* Adjusted to match your screenshot's dark gray */
                         'status-open': '#4CAF50',
                         'status-closed': '#E57373',
                     },
                     fontFamily: {
-                        serif: ['"Playfair Display"', 'serif'],
-                        sans: ['"Lato"', '"Noto Sans TC"', 'sans-serif'],
+                        // The requested font stack
+                        sans: ['"Zen Kaku Gothic New"', '"Noto Sans TC"', 'sans-serif'],
                     },
                     boxShadow: {
                         'elegant': '0 10px 30px -10px rgba(0, 0, 0, 0.08)',
@@ -41,8 +44,13 @@
     </script>
 
     <style>
-        body { background-color: #FDFCF8; font-family: 'Lato', 'Noto Sans TC', sans-serif; color: #2C3E50; }
-        h1, h2, h3, .font-serif { font-family: 'Playfair Display', serif; }
+        /* Apply Zen Kaku Gothic New globally */
+        body { 
+            background-color: #FDFCF8; 
+            font-family: 'Zen Kaku Gothic New', 'Noto Sans TC', sans-serif; 
+            color: #4A4A4A; 
+            letter-spacing: 0.02em; /* Slight tracking for that clean modern look */
+        }
         
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -51,7 +59,12 @@
         ::-webkit-scrollbar-thumb:hover { background: #C6A568; }
 
         /* Map Container */
-        #map { height: 100%; width: 100%; z-index: 0; border-radius: 24px; }
+        #map { height: 100%; width: 100%; z-index: 0; border-radius: 24px; background: #F5F2EA; }
+        
+        /* Leaflet Customizations for Elite Look */
+        .leaflet-popup-content-wrapper { border-radius: 12px; font-family: 'Zen Kaku Gothic New', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .leaflet-popup-tip { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .custom-div-icon { background: transparent; border: none; }
         
         /* Card Animations */
         .spot-card { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border-left: 3px solid transparent; }
@@ -78,17 +91,17 @@
     
     <div class="scroll-panel flex flex-col gap-6 relative z-10">
         
-        <header class="text-center pt-4 pb-2">
-            <p class="text-xs font-bold tracking-[0.3em] text-warm-gold uppercase mb-2">Bangkok 2025</p>
-            <h1 class="text-4xl font-serif font-bold text-charcoal mb-1">泰廢了</h1>
-            <p class="text-sm text-fog-dark italic font-serif">The Elite Escape • Dec 23 - 28</p>
+        <header class="pt-4 pb-2 px-1">
+            <p class="text-xs font-bold tracking-[0.15em] text-gray-400 mb-1">DEC 23 - DEC 28</p>
+            <h1 class="text-3xl font-black text-charcoal mb-1 tracking-tight">2025 曼谷聖誕跨年</h1>
+            <h2 class="text-xl font-bold text-warm-gold tracking-wide">- 泰廢了 (Elite) -</h2>
         </header>
 
         <div class="bg-white rounded-2xl p-5 shadow-elegant border border-ivory-dark relative overflow-hidden group">
             <div class="absolute top-0 right-0 w-20 h-20 bg-warm-gold/10 rounded-full -mr-10 -mt-10 transition group-hover:bg-warm-gold/20"></div>
             <div class="flex justify-between items-end mb-3">
-                <h3 class="font-bold text-lg text-fog-dark">預算估算 <span class="text-[10px] font-normal border border-fog-blue text-fog-blue px-2 py-0.5 rounded-full ml-2">Dynamic</span></h3>
-                <select id="budget-tier" onchange="calculateBudget()" class="text-xs bg-ivory-dark border-none rounded-lg px-2 py-1 outline-none text-charcoal font-bold cursor-pointer">
+                <h3 class="font-bold text-lg text-fog-dark tracking-wide">預算估算 <span class="text-[10px] font-medium border border-fog-blue text-fog-blue px-2 py-0.5 rounded-full ml-2">Dynamic</span></h3>
+                <select id="budget-tier" onchange="calculateBudget()" class="text-xs bg-ivory-dark border-none rounded-lg px-2 py-1 outline-none text-charcoal font-bold cursor-pointer font-sans">
                     <option value="low">小資 (Low)</option>
                     <option value="std" selected>標準 (Std)</option>
                     <option value="high">奢華 (High)</option>
@@ -96,18 +109,18 @@
             </div>
             <div class="flex gap-4">
                 <div class="flex-1">
-                    <p class="text-[10px] text-gray-400 uppercase tracking-wider">Estimated Total</p>
-                    <p class="text-2xl font-serif font-bold text-warm-gold" id="total-budget">฿ 0</p>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Estimated Total</p>
+                    <p class="text-2xl font-black text-warm-gold tracking-tight" id="total-budget">฿ 0</p>
                 </div>
                 <div class="flex-1 text-right border-l border-gray-100 pl-4">
-                    <p class="text-[10px] text-gray-400">已含門票 & 餐食</p>
-                    <p class="text-xs text-fog-dark mt-1" id="budget-breakdown">Ticket: 0 | Food: 0</p>
+                    <p class="text-[10px] text-gray-400 font-medium">已含門票 & 餐食</p>
+                    <p class="text-xs text-fog-dark mt-1 font-bold" id="budget-breakdown">Ticket: 0 | Food: 0</p>
                 </div>
             </div>
         </div>
 
         <div class="sticky top-0 bg-ivory-bg/95 backdrop-blur z-30 py-2 border-b border-ivory-dark">
-            <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2" id="day-tabs">
+            <div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2 px-1" id="day-tabs">
                 </div>
         </div>
 
@@ -115,23 +128,23 @@
             </div>
 
         <div class="bg-ivory-dark rounded-xl p-4 mt-4 border-l-4 border-fog-blue">
-            <h4 class="text-xs font-bold text-fog-dark uppercase mb-2">住宿安排</h4>
+            <h4 class="text-xs font-bold text-fog-dark uppercase mb-2 tracking-wider">住宿安排</h4>
             <div class="flex justify-between items-center text-sm mb-1">
-                <span>12/23 - 25</span>
-                <span class="font-bold">B2 唐人街飯店</span>
+                <span class="font-medium text-gray-500">12/23 - 25</span>
+                <span class="font-bold text-charcoal">B2 唐人街飯店</span>
             </div>
             <div class="flex justify-between items-center text-sm">
-                <span>12/25 - 27</span>
-                <span class="font-bold">曼谷茉莉花 59 號</span>
+                <span class="font-medium text-gray-500">12/25 - 27</span>
+                <span class="font-bold text-charcoal">曼谷茉莉花 59 號</span>
             </div>
         </div>
         
         <div class="h-10"></div> </div>
 
-    <div id="map-mobile-container" class="relative h-full shadow-elegant rounded-3xl overflow-hidden border-4 border-white">
+    <div id="map-mobile-container" class="relative h-full shadow-elegant rounded-3xl overflow-hidden border-4 border-white bg-[#F5F2EA]">
         <div id="map"></div>
         
-        <div class="absolute bottom-6 right-6 z-[1000] flex flex-col gap-3">
+        <div class="absolute bottom-6 right-6 z-[400] flex flex-col gap-3">
              <button onclick="optimizeRoute()" class="bg-charcoal text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:bg-warm-gold transition tooltip-container">
                 <i class="fas fa-magic"></i>
             </button>
@@ -140,9 +153,9 @@
             </button>
         </div>
         
-        <div class="absolute top-6 left-6 z-[1000] bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border-l-4 border-warm-gold">
-            <p class="text-xs font-bold text-gray-500">當日動線</p>
-            <p class="text-sm font-bold text-charcoal" id="route-distance">0 km • 0 min</p>
+        <div class="absolute top-6 left-6 z-[400] bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border-l-4 border-warm-gold">
+            <p class="text-xs font-bold text-gray-500 mb-0.5">當日動線</p>
+            <p class="text-sm font-black text-charcoal tracking-wide" id="route-distance">0 km • 0 min</p>
         </div>
     </div>
 
@@ -209,72 +222,54 @@
     let currentDayIdx = 0;
     let map;
     let markers = [];
-    let polyline = null;
+    let polyline;
     let sortable;
 
-    // --- Google Maps Logic ---
-    function initMap() {
-        const bangkok = { lat: 13.7563, lng: 100.5018 };
-        
-        map = new google.maps.Map(document.getElementById("map"), {
-            zoom: 13,
-            center: bangkok,
-            disableDefaultUI: true, // Elegant clean look
-            zoomControl: true,
-            styles: [
-                {
-                    "featureType": "poi",
-                    "elementType": "labels.icon",
-                    "stylers": [{ "visibility": "off" }] // Hide default POI icons for cleaner map
-                }
-            ]
-        });
-
-        // Initialize App
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
         renderTabs();
         loadDay(0);
-    }
+    });
 
-    // Helper to generate SVG marker with number
-    function getSvgMarker(color, number) {
-        const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-          <path fill="${color}" stroke="white" stroke-width="2" d="M16 0C9.37 0 4 5.37 4 12c0 9 12 20 12 20s12-11 12-20c0-6.63-5.37-12-12-12z"/>
-          <text x="16" y="18" font-size="12" font-family="Arial" font-weight="bold" fill="white" text-anchor="middle">${number}</text>
-        </svg>`;
-        return {
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-            scaledSize: new google.maps.Size(32, 32),
-            labelOrigin: new google.maps.Point(16, 12)
-        };
+    // --- Map Logic (Leaflet with CartoDB Voyager Style) ---
+    function initMap() {
+        // Default center
+        map = L.map('map', { zoomControl: false }).setView([13.7563, 100.5018], 13);
+        
+        // 使用 CartoDB Voyager 圖層 (高雅設計感，免費，無需 Key)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
     }
 
     function updateMap(spots) {
-        // Clear existing markers & polyline
-        markers.forEach(m => m.setMap(null));
+        markers.forEach(m => map.removeLayer(m));
+        if (polyline) map.removeLayer(polyline);
         markers = [];
-        if (polyline) polyline.setMap(null);
 
-        const path = [];
-        const bounds = new google.maps.LatLngBounds();
+        const latlngs = [];
+        const bounds = L.latLngBounds();
 
         spots.forEach((spot, idx) => {
             if (spot.lat && spot.lng) {
-                const position = { lat: spot.lat, lng: spot.lng };
-                
-                // Color Logic
-                const color = idx === 0 ? '#4CAF50' : (idx === spots.length - 1 ? '#E57373' : '#7B9EB2');
-                
-                const marker = new google.maps.Marker({
-                    position: position,
-                    map: map,
-                    title: spot.name,
-                    icon: getSvgMarker(color, idx + 1),
-                    animation: google.maps.Animation.DROP
+                // High-End Custom Marker with Number
+                const iconColor = idx === 0 ? '#4CAF50' : (idx === spots.length - 1 ? '#E57373' : '#7B9EB2');
+                const customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color:${iconColor}; width:24px; height:24px; border-radius:50%; border:3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:900; font-family:'Zen Kaku Gothic New';">${idx + 1}</div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
                 });
 
-                // Click event
-                marker.addListener("click", () => {
+                const m = L.marker([spot.lat, spot.lng], { icon: customIcon })
+                    .bindPopup(`<div class="text-center font-sans"><h3 class="font-bold text-charcoal text-sm mb-1 tracking-wide">${spot.name}</h3><p class="text-[10px] text-gray-500">${spot.desc}</p></div>`)
+                    .addTo(map);
+                
+                m.on('click', () => {
                     document.querySelectorAll('.spot-card').forEach(el => el.classList.remove('active'));
                     const card = document.querySelector(`[data-id="${spot.id}"]`);
                     if(card) {
@@ -283,43 +278,33 @@
                     }
                 });
 
-                markers.push(marker);
-                path.push(position);
-                bounds.extend(position);
+                markers.push(m);
+                latlngs.push([spot.lat, spot.lng]);
+                bounds.extend([spot.lat, spot.lng]);
             }
         });
 
-        // Draw Polyline
-        if (path.length > 1) {
-            polyline = new google.maps.Polyline({
-                path: path,
-                geodesic: true,
-                strokeColor: "#C6A568",
-                strokeOpacity: 1.0,
-                strokeWeight: 3,
-                icons: [{
-                    icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, strokeColor: "#C6A568", scale: 2 },
-                    offset: '100%',
-                    repeat: '100px'
-                }],
-                map: map
-            });
+        if (latlngs.length > 1) {
+            // Elegant Gold Polyline
+            polyline = L.polyline(latlngs, { color: '#C6A568', weight: 4, opacity: 0.8, dashArray: '5, 8' }).addTo(map);
             
-            // Calculate Distance (Geometry Lib)
-            const dist = google.maps.geometry.spherical.computeLength(path);
-            document.getElementById('route-distance').innerHTML = `<i class="fas fa-route text-warm-gold mr-1"></i> ${(dist/1000).toFixed(1)} km`;
+            // Calculate Distance
+            let dist = 0;
+            for(let i=0; i<latlngs.length-1; i++) {
+                dist += map.distance(latlngs[i], latlngs[i+1]);
+            }
+            document.getElementById('route-distance').innerHTML = `<i class="fas fa-route text-warm-gold mr-1"></i> ${(dist/1000).toFixed(1)} km • ~${Math.round(dist/1000 * 5 + 10)} min drive`;
         } else {
              document.getElementById('route-distance').innerText = "單點行程";
         }
 
-        if (path.length > 0) {
-            map.fitBounds(bounds);
+        if (latlngs.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
         }
     }
 
     function focusSpot(lat, lng, id) {
-        map.panTo({ lat, lng });
-        map.setZoom(16);
+        map.flyTo([lat, lng], 15, { duration: 1.5 });
         document.querySelectorAll('.spot-card').forEach(el => el.classList.remove('active'));
         document.getElementById(`card-${id}`).classList.add('active');
     }
@@ -328,9 +313,9 @@
     function renderTabs() {
         const c = document.getElementById('day-tabs');
         c.innerHTML = ITINERARY_DATA.map((d, i) => `
-            <button onclick="loadDay(${i})" class="day-tab flex-shrink-0 px-4 py-2 rounded-xl border transition-all duration-300 ${i===currentDayIdx ? 'bg-charcoal text-white border-charcoal shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:border-warm-gold'}">
-                <span class="block text-xs font-bold font-serif">Day ${d.day}</span>
-                <span class="text-[10px] whitespace-nowrap opacity-80">${d.date.split(' ')[0]}</span>
+            <button onclick="loadDay(${i})" class="day-tab flex-shrink-0 px-5 py-3 rounded-2xl border transition-all duration-300 font-sans ${i===currentDayIdx ? 'bg-charcoal text-white border-charcoal shadow-lg transform scale-105' : 'bg-white text-gray-400 border-gray-100 hover:border-warm-gold'}">
+                <span class="block text-xs font-black tracking-wide">Day ${d.day}</span>
+                <span class="text-[10px] font-medium whitespace-nowrap opacity-80">${d.date.split(' ')[0]}</span>
             </button>
         `).join('');
     }
@@ -341,14 +326,12 @@
         
         const list = document.getElementById('itinerary-list');
         const dayData = ITINERARY_DATA[idx];
-        
-        // Reset list for new content
         list.innerHTML = '';
         
         dayData.spots.forEach(spot => {
             const isOpen = checkOpen(spot.open);
             const card = document.createElement('div');
-            card.className = "spot-card bg-white p-4 rounded-xl shadow-sm border border-gray-50 cursor-pointer relative overflow-hidden group";
+            card.className = "spot-card bg-white p-4 rounded-2xl shadow-sm border border-gray-50 cursor-pointer relative overflow-hidden group";
             card.setAttribute('data-id', spot.id);
             card.id = `card-${spot.id}`;
             card.onclick = () => focusSpot(spot.lat, spot.lng, spot.id);
@@ -356,24 +339,24 @@
             card.innerHTML = `
                 <div class="flex items-start gap-4 relative z-10">
                     <div class="flex flex-col items-center min-w-[50px]">
-                        <span class="text-xs font-bold text-warm-gold">${spot.time}</span>
+                        <span class="text-xs font-black text-warm-gold font-sans tracking-wide">${spot.time}</span>
                         <div class="h-full w-px bg-gray-100 my-1 group-hover:bg-warm-gold transition-colors"></div>
                     </div>
                     <div class="flex-1">
                         <div class="flex justify-between items-start">
-                            <h3 class="font-bold text-charcoal text-lg leading-tight">${spot.name}</h3>
+                            <h3 class="font-bold text-charcoal text-lg leading-tight tracking-wide font-sans">${spot.name}</h3>
                             ${spot.type === 'food' || spot.type === 'shopping' || spot.type === 'attraction' ? 
                               `<span class="text-[10px] px-2 py-0.5 rounded-full ${isOpen ? 'bg-green-100 text-status-open' : 'bg-red-50 text-status-closed'} font-bold border border-current">
                                 ${isOpen ? 'Open' : 'Closed'}
                                </span>` : ''}
                         </div>
-                        <p class="text-xs text-fog-dark mt-1">${spot.desc}</p>
+                        <p class="text-xs text-fog-dark mt-1 font-medium font-sans">${spot.desc}</p>
                         
                         <div class="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
-                            ${spot.link ? `<button onclick="event.stopPropagation(); window.open('${spot.link}','_blank')" class="text-[10px] bg-fog-blue text-white px-3 py-1 rounded hover:bg-fog-dark transition">
+                            ${spot.link ? `<button onclick="event.stopPropagation(); window.open('${spot.link}','_blank')" class="text-[10px] bg-fog-blue text-white px-3 py-1 rounded-lg hover:bg-fog-dark transition font-bold tracking-wide">
                                 <i class="fas fa-calendar-check mr-1"></i> 預訂/攻略
                             </button>` : ''}
-                            <button onclick="event.stopPropagation(); showDetail('${spot.id}')" class="text-[10px] bg-gray-100 text-gray-500 px-3 py-1 rounded hover:bg-gray-200 transition">
+                            <button onclick="event.stopPropagation(); showDetail('${spot.id}')" class="text-[10px] bg-gray-100 text-gray-500 px-3 py-1 rounded-lg hover:bg-gray-200 transition font-bold tracking-wide">
                                 <i class="fas fa-info-circle mr-1"></i> 詳情
                             </button>
                         </div>
@@ -386,26 +369,22 @@
             list.appendChild(card);
         });
 
-        // Re-init Sortable
         if(sortable) sortable.destroy();
         sortable = new Sortable(list, {
             animation: 150,
             ghostClass: 'sortable-ghost',
             onEnd: function(evt) {
-                // Reorder array data
                 const item = ITINERARY_DATA[currentDayIdx].spots.splice(evt.oldIndex, 1)[0];
                 ITINERARY_DATA[currentDayIdx].spots.splice(evt.newIndex, 0, item);
-                // Update map route
                 updateMap(ITINERARY_DATA[currentDayIdx].spots);
             }
         });
 
-        // Update Budget and Map
         calculateBudget();
-        if(map) updateMap(dayData.spots); // Ensure map is ready
+        updateMap(dayData.spots);
     }
 
-    // --- Helpers & Logic ---
+    // --- Helpers ---
     function getIcon(type) {
         const map = { 'food': 'fa-utensils', 'hotel': 'fa-bed', 'shopping': 'fa-shopping-bag', 'transport': 'fa-car', 'attraction': 'fa-camera', 'party': 'fa-glass-cheers', 'walk': 'fa-walking', 'activity': 'fa-ticket-alt' };
         return map[type] || 'fa-map-marker-alt';
@@ -429,25 +408,9 @@
             });
         });
 
-        animateValue("total-budget", parseInt(document.getElementById("total-budget").innerText.replace(/\D/g,'')) || 0, totalT + totalF, 500);
+        const obj = document.getElementById("total-budget");
+        obj.innerText = "฿ " + (totalT + totalF).toLocaleString();
         document.getElementById('budget-breakdown').innerText = `Ticket: ฿${totalT.toLocaleString()} | Food: ~฿${Math.round(totalF).toLocaleString()}`;
-    }
-
-    function animateValue(id, start, end, duration) {
-        if (start === end) return;
-        const range = end - start;
-        let current = start;
-        const increment = end > start ? Math.ceil(range / (duration / 20)) : Math.floor(range / (duration / 20));
-        const stepTime = Math.abs(Math.floor(duration / (range / increment)));
-        const obj = document.getElementById(id);
-        const timer = setInterval(function() {
-            current += increment;
-            obj.innerHTML = "฿ " + current.toLocaleString();
-            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                clearInterval(timer);
-                obj.innerHTML = "฿ " + end.toLocaleString();
-            }
-        }, stepTime);
     }
 
     function optimizeRoute() {
@@ -463,9 +426,8 @@
     }
     
     function resetMap() {
-        const bounds = new google.maps.LatLngBounds();
-        ITINERARY_DATA[currentDayIdx].spots.forEach(s => bounds.extend({lat: s.lat, lng: s.lng}));
-        map.fitBounds(bounds);
+        const bounds = L.latLngBounds(ITINERARY_DATA[currentDayIdx].spots.map(s => [s.lat, s.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
     }
 
     function showDetail(id) {
@@ -477,19 +439,19 @@
         
         content.innerHTML = `
             <div class="flex justify-between items-start mb-4">
-                <h2 class="text-2xl font-serif font-bold text-charcoal">${spot.name}</h2>
+                <h2 class="text-2xl font-black text-charcoal tracking-wide">${spot.name}</h2>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-charcoal"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <div class="bg-ivory-dark p-4 rounded-xl mb-4">
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div><span class="text-gray-400 block text-xs">營業時間</span><span class="font-bold">${spot.open || '24 hrs'}</span></div>
-                    <div><span class="text-gray-400 block text-xs">預算參考</span><span class="font-bold">฿${(spot.cost_f || 0) + (spot.cost_t || 0)}</span></div>
+            <div class="bg-ivory-dark p-4 rounded-xl mb-4 border border-gray-100">
+                <div class="grid grid-cols-2 gap-4 text-sm font-sans">
+                    <div><span class="text-gray-400 block text-xs font-bold uppercase tracking-wider mb-1">營業時間</span><span class="font-bold text-charcoal">${spot.open || '24 hrs'}</span></div>
+                    <div><span class="text-gray-400 block text-xs font-bold uppercase tracking-wider mb-1">預算參考</span><span class="font-bold text-charcoal">฿${(spot.cost_f || 0) + (spot.cost_t || 0)}</span></div>
                 </div>
             </div>
-            <p class="text-fog-dark leading-relaxed mb-6">${spot.desc}。</p>
-            <div class="flex gap-3">
-                ${spot.link ? `<a href="${spot.link}" target="_blank" class="flex-1 bg-warm-gold text-white text-center py-3 rounded-lg font-bold shadow-gold-glow hover:opacity-90 transition">立即預訂/查詢</a>` : ''}
-                <a href="https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}" target="_blank" class="flex-1 border border-charcoal text-charcoal text-center py-3 rounded-lg font-bold hover:bg-charcoal hover:text-white transition">開啟 Google 導航</a>
+            <p class="text-fog-dark leading-relaxed mb-6 font-medium">${spot.desc}。</p>
+            <div class="flex gap-3 font-sans">
+                ${spot.link ? `<a href="${spot.link}" target="_blank" class="flex-1 bg-warm-gold text-white text-center py-3 rounded-xl font-bold shadow-gold-glow hover:opacity-90 transition tracking-wide">立即預訂/查詢</a>` : ''}
+                <a href="https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}" target="_blank" class="flex-1 border border-charcoal text-charcoal text-center py-3 rounded-xl font-bold hover:bg-charcoal hover:text-white transition tracking-wide">開啟導航</a>
             </div>
         `;
         
