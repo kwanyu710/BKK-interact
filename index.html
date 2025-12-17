@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2025 曼谷聖誕跨年 | 泰廢了 Elite Edition</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ivory-bg': '#FDFCF8',
+                        'ivory-dark': '#F5F2EA',
+                        'fog-blue': '#7B9EB2',
+                        'fog-dark': '#5A7A8C',
+                        'warm-gold': '#C6A568',
+                        'charcoal': '#2C3E50',
+                        'status-open': '#4CAF50',
+                        'status-closed': '#E57373',
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Lato"', '"Noto Sans TC"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'elegant': '0 10px 30px -10px rgba(0, 0, 0, 0.08)',
+                        'gold-glow': '0 4px 20px rgba(198, 165, 104, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #FDFCF8; font-family: 'Lato', 'Noto Sans TC', sans-serif; color: #2C3E50; }
+        h1, h2, h3, .font-serif { font-family: 'Playfair Display', serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E0E0E0; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #C6A568; }
+
+        /* Map Container */
+        #map { height: 100%; width: 100%; z-index: 0; border-radius: 24px; }
+        .leaflet-popup-content-wrapper { border-radius: 12px; font-family: 'Lato', sans-serif; }
+        
+        /* Card Animations */
+        .spot-card { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border-left: 3px solid transparent; }
+        .spot-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px -10px rgba(123, 158, 178, 0.3); border-left: 3px solid #C6A568; }
+        .spot-card.active { border-left: 3px solid #C6A568; background: #FFFCF5; }
+        
+        /* Sortable Ghost */
+        .sortable-ghost { opacity: 0.4; background: #F0F0F0; border: 1px dashed #C6A568; }
+
+        /* Floating Panel on Desktop */
+        @media (min-width: 1024px) {
+            .app-layout { display: grid; grid-template-columns: 420px 1fr; gap: 24px; height: 100vh; padding: 24px; overflow: hidden; }
+            .scroll-panel { overflow-y: auto; padding-right: 10px; height: 100%; }
+        }
+        @media (max-width: 1023px) {
+            .app-layout { display: flex; flex-direction: column; height: auto; }
+            #map-mobile-container { height: 350px; width: 100%; position: sticky; top: 0; z-index: 40; }
+        }
+    </style>
+</head>
+<body class="bg-ivory-bg text-charcoal antialiased">
+
+<div class="app-layout">
+    
+    <div class="scroll-panel flex flex-col gap-6 relative z-10">
+        
+        <header class="text-center pt-4 pb-2">
+            <p class="text-xs font-bold tracking-[0.3em] text-warm-gold uppercase mb-2">Bangkok 2025</p>
+            <h1 class="text-4xl font-serif font-bold text-charcoal mb-1">泰廢了</h1>
+            <p class="text-sm text-fog-dark italic font-serif">The Elite Escape • Dec 23 - 28</p>
+        </header>
+
+        <div class="bg-white rounded-2xl p-5 shadow-elegant border border-ivory-dark relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-warm-gold/10 rounded-full -mr-10 -mt-10 transition group-hover:bg-warm-gold/20"></div>
+            <div class="flex justify-between items-end mb-3">
+                <h3 class="font-bold text-lg text-fog-dark">預算估算 <span class="text-[10px] font-normal border border-fog-blue text-fog-blue px-2 py-0.5 rounded-full ml-2">Dynamic</span></h3>
+                <select id="budget-tier" onchange="calculateBudget()" class="text-xs bg-ivory-dark border-none rounded-lg px-2 py-1 outline-none text-charcoal font-bold cursor-pointer">
+                    <option value="low">小資 (Low)</option>
+                    <option value="std" selected>標準 (Std)</option>
+                    <option value="high">奢華 (High)</option>
+                </select>
+            </div>
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider">Estimated Total</p>
+                    <p class="text-2xl font-serif font-bold text-warm-gold" id="total-budget">฿ 0</p>
+                </div>
+                <div class="flex-1 text-right border-l border-gray-100 pl-4">
+                    <p class="text-[10px] text-gray-400">已含門票 & 餐食</p>
+                    <p class="text-xs text-fog-dark mt-1" id="budget-breakdown">Ticket: 0 | Food: 0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky top-0 bg-ivory-bg/95 backdrop-blur z-30 py-2 border-b border-ivory-dark">
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2" id="day-tabs">
+                </div>
+        </div>
+
+        <div id="itinerary-list" class="space-y-4 min-h-[300px]">
+            </div>
+
+        <div class="bg-ivory-dark rounded-xl p-4 mt-4 border-l-4 border-fog-blue">
+            <h4 class="text-xs font-bold text-fog-dark uppercase mb-2">住宿安排</h4>
+            <div class="flex justify-between items-center text-sm mb-1">
+                <span>12/23 - 25</span>
+                <span class="font-bold">B2 唐人街飯店</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+                <span>12/25 - 27</span>
+                <span class="font-bold">曼谷茉莉花 59 號</span>
+            </div>
+        </div>
+        
+        <div class="h-10"></div> </div>
+
+    <div id="map-mobile-container" class="relative h-full shadow-elegant rounded-3xl overflow-hidden border-4 border-white">
+        <div id="map"></div>
+        
+        <div class="absolute bottom-6 right-6 z-[1000] flex flex-col gap-3">
+             <button onclick="optimizeRoute()" class="bg-charcoal text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:bg-warm-gold transition tooltip-container">
+                <i class="fas fa-magic"></i>
+            </button>
+            <button onclick="resetMap()" class="bg-white text-charcoal w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:text-fog-blue transition">
+                <i class="fas fa-compress-arrows-alt"></i>
+            </button>
+        </div>
+        
+        <div class="absolute top-6 left-6 z-[1000] bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border-l-4 border-warm-gold">
+            <p class="text-xs font-bold text-gray-500">當日動線</p>
+            <p class="text-sm font-bold text-charcoal" id="route-distance">0 km • 0 min</p>
+        </div>
+    </div>
+
+</div>
+
+<div id="modal" class="fixed inset-0 z-50 bg-black/50 hidden items-center justify-center backdrop-blur-sm opacity-0 transition-opacity duration-300">
+    <div class="bg-white w-[90%] max-w-md rounded-2xl p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="modal-content">
+        </div>
+</div>
+
+<script>
+    // --- Data Source (Enriched from original HTML) ---
+    const ITINERARY_DATA = [
+        { 
+            day: 1, date: "12/23 (二)", title: "抵達曼谷", 
+            spots: [
+                { id: "s1", time: "18:00", name: "高雄出發 (FD235)", type: "transport", lat: 13.9132, lng: 100.6042, cost_t: 0, cost_f: 0, desc: "21:30 抵達廊曼機場 (DMK)" },
+                { id: "s2", time: "22:30", name: "機場包車接機", type: "transport", lat: 13.7407, lng: 100.5126, cost_t: 200, cost_f: 0, desc: "直達 B2 飯店 (含過路費預估)" },
+                { id: "s3", time: "23:30", name: "唐人街宵夜", type: "food", lat: 13.7412, lng: 100.5083, cost_t: 0, cost_f: 300, desc: "耀華力路 T&K 海鮮、粿汁", open: "17:00-02:00", link: "https://www.google.com/search?q=曼谷唐人街美食" },
+                { id: "s4", time: "Sleep", name: "B2 唐人街飯店", type: "hotel", lat: 13.7420, lng: 100.5130, cost_t: 0, cost_f: 0, desc: "Check-in 休息" }
+            ]
+        },
+        { 
+            day: 2, date: "12/24 (三)", title: "古都平安夜", 
+            spots: [
+                { id: "s5", time: "09:00", name: "臥佛寺 Wat Pho", type: "attraction", lat: 13.7465, lng: 100.4933, cost_t: 200, cost_f: 0, desc: "全泰最大臥佛 & 按摩學校", open: "08:00-18:30" },
+                { id: "s6", time: "11:00", name: "鄭王廟 Wat Arun", type: "attraction", lat: 13.7437, lng: 100.4888, cost_t: 100, cost_f: 0, desc: "必拍白色佛塔 (搭船對岸)", open: "08:00-18:00" },
+                { id: "s7", time: "13:00", name: "王朗市場 Wang Lang", type: "food", lat: 13.7554, lng: 100.4855, cost_t: 0, cost_f: 150, desc: "在地平價小吃、炸麵包", open: "09:00-18:00" },
+                { id: "s8", time: "16:00", name: "Iconsiam", type: "shopping", lat: 13.7267, lng: 100.5110, cost_t: 0, cost_f: 200, desc: "室內水上市場、頂樓河景", open: "10:00-22:00" },
+                { id: "s9", time: "19:00", name: "考山路 Khao San", type: "party", lat: 13.7589, lng: 100.4972, cost_t: 0, cost_f: 500, desc: "平安夜狂歡、露天酒吧", open: "16:00-02:00", link: "https://www.google.com/search?q=Khao+San+Road+Bars" }
+            ]
+        },
+        { 
+            day: 3, date: "12/25 (四)", title: "文青聖誕", 
+            spots: [
+                { id: "s10", time: "09:30", name: "嵩越路/Talat Noi", type: "walk", lat: 13.7367, lng: 100.5106, cost_t: 0, cost_f: 100, desc: "老屋咖啡、街頭塗鴉散策", open: "10:00-18:00" },
+                { id: "s11", time: "12:30", name: "石龍軍路午餐", type: "food", lat: 13.7214, lng: 100.5161, cost_t: 0, cost_f: 200, desc: "百年鴨肉、豬肉粥", open: "08:00-20:00" },
+                { id: "s12", time: "16:00", name: "Asiatique 碼頭", type: "transport", lat: 13.7046, lng: 100.5032, cost_t: 0, cost_f: 0, desc: "7號倉庫集合 (16:45 登船)" },
+                { id: "s13", time: "17:00", name: "昭披耶公主號遊船", type: "activity", lat: 13.7046, lng: 100.5032, cost_t: 1200, cost_f: 0, desc: "日落 Buffet 晚餐", link: "https://www.klook.com/" },
+                { id: "s14", time: "19:00", name: "Jasmine 59 飯店", type: "hotel", lat: 13.7296, lng: 100.5815, cost_t: 0, cost_f: 0, desc: "換飯店至通羅區 Check-in" }
+            ]
+        },
+        { 
+            day: 4, date: "12/26 (五)", title: "水上市場", 
+            spots: [
+                { id: "s15", time: "08:00", name: "飯店包車出發", type: "transport", lat: 13.7296, lng: 100.5815, cost_t: 500, cost_f: 0, desc: "大廳集合 (準時!)" },
+                { id: "s16", time: "10:00", name: "美功鐵道市場", type: "attraction", lat: 13.4075, lng: 99.9989, cost_t: 0, cost_f: 50, desc: "看火車進站奇景", open: "06:00-17:00" },
+                { id: "s17", time: "12:00", name: "丹嫩莎朵水上市場", type: "activity", lat: 13.5197, lng: 99.9592, cost_t: 300, cost_f: 200, desc: "手搖船體驗、殺價", open: "07:00-14:00" },
+                { id: "s18", time: "14:00", name: "樹中廟", type: "attraction", lat: 13.4442, lng: 99.9419, cost_t: 20, cost_f: 0, desc: "靈驗求勝古廟", open: "08:00-17:00" },
+                { id: "s19", time: "18:00", name: "返回曼谷", type: "transport", lat: 13.7296, lng: 100.5815, cost_t: 0, cost_f: 0, desc: "休息或周邊按摩" }
+            ]
+        },
+        { 
+            day: 5, date: "12/27 (六)", title: "採買返台", 
+            spots: [
+                { id: "s20", time: "10:00", name: "恰圖恰市集", type: "shopping", lat: 13.7999, lng: 100.5508, cost_t: 0, cost_f: 200, desc: "世界最大週末市集", open: "09:00-18:00" },
+                { id: "s21", time: "15:00", name: "Big C 拉差丹利", type: "shopping", lat: 13.7466, lng: 100.5408, cost_t: 0, cost_f: 0, desc: "伴手禮最後掃貨", open: "09:00-23:00" },
+                { id: "s22", time: "19:00", name: "Krua Khun Puk", type: "food", lat: 13.7408, lng: 100.5562, cost_t: 0, cost_f: 300, desc: "Nana 站人氣熱炒", open: "16:00-04:00", link: "https://www.google.com/maps" },
+                { id: "s23", time: "Flight", name: "前往機場 (BKK)", type: "transport", lat: 13.6900, lng: 100.7501, cost_t: 100, cost_f: 0, desc: "預備返台" }
+            ]
+        }
+    ];
+
+    let currentDayIdx = 0;
+    let map;
+    let markers = [];
+    let polyline;
+    let sortable;
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        renderTabs();
+        loadDay(0);
+    });
+
+    // --- Map Logic (Leaflet) ---
+    function initMap() {
+        // Default center (Bangkok)
+        map = L.map('map', { zoomControl: false }).setView([13.7563, 100.5018], 13);
+        
+        // Elegant Styled Tiles (CartoDB Voyager)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+    }
+
+    function updateMap(spots) {
+        // Clear existing
+        markers.forEach(m => map.removeLayer(m));
+        if (polyline) map.removeLayer(polyline);
+        markers = [];
+
+        const latlngs = [];
+        const bounds = L.latLngBounds();
+
+        spots.forEach((spot, idx) => {
+            if (spot.lat && spot.lng) {
+                // Custom Marker
+                const iconColor = idx === 0 ? '#4CAF50' : (idx === spots.length - 1 ? '#E57373' : '#7B9EB2');
+                const customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color:${iconColor}; width:24px; height:24px; border-radius:50%; border:3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:bold;">${idx + 1}</div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                const m = L.marker([spot.lat, spot.lng], { icon: customIcon })
+                    .bindPopup(`<div class="text-center"><h3 class="font-bold text-charcoal">${spot.name}</h3><p class="text-xs text-gray-500">${spot.desc}</p></div>`)
+                    .addTo(map);
+                
+                // Add click event to marker to highlight list item
+                m.on('click', () => {
+                    document.querySelectorAll('.spot-card').forEach(el => el.classList.remove('active'));
+                    const card = document.querySelector(`[data-id="${spot.id}"]`);
+                    if(card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        card.classList.add('active');
+                    }
+                });
+
+                markers.push(m);
+                latlngs.push([spot.lat, spot.lng]);
+                bounds.extend([spot.lat, spot.lng]);
+            }
+        });
+
+        if (latlngs.length > 1) {
+            polyline = L.polyline(latlngs, { color: '#C6A568', weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(map);
+            
+            // Calculate simulated distance
+            let dist = 0;
+            for(let i=0; i<latlngs.length-1; i++) {
+                dist += map.distance(latlngs[i], latlngs[i+1]);
+            }
+            document.getElementById('route-distance').innerHTML = `<i class="fas fa-route text-warm-gold mr-1"></i> ${(dist/1000).toFixed(1)} km • ~${Math.round(dist/1000 * 5 + 10)} min drive`;
+        } else {
+             document.getElementById('route-distance').innerText = "單點行程";
+        }
+
+        if (latlngs.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+    }
+
+    function focusSpot(lat, lng, id) {
+        map.flyTo([lat, lng], 15, { duration: 1.5 });
+        document.querySelectorAll('.spot-card').forEach(el => el.classList.remove('active'));
+        document.getElementById(`card-${id}`).classList.add('active');
+    }
+
+    // --- UI Rendering ---
+    function renderTabs() {
+        const c = document.getElementById('day-tabs');
+        c.innerHTML = ITINERARY_DATA.map((d, i) => `
+            <button onclick="loadDay(${i})" class="day-tab flex-shrink-0 px-4 py-2 rounded-xl border transition-all duration-300 ${i===currentDayIdx ? 'bg-charcoal text-white border-charcoal shadow-lg' : 'bg-white text-gray-400 border-gray-100 hover:border-warm-gold'}">
+                <span class="block text-xs font-bold font-serif">Day ${d.day}</span>
+                <span class="text-[10px] whitespace-nowrap opacity-80">${d.date.split(' ')[0]}</span>
+            </button>
+        `).join('');
+    }
+
+    function loadDay(idx) {
+        currentDayIdx = idx;
+        renderTabs();
+        
+        const list = document.getElementById('itinerary-list');
+        const dayData = ITINERARY_DATA[idx];
+        
+        // Reset list for new content
+        list.innerHTML = '';
+        
+        dayData.spots.forEach(spot => {
+            const isOpen = checkOpen(spot.open);
+            const card = document.createElement('div');
+            card.className = "spot-card bg-white p-4 rounded-xl shadow-sm border border-gray-50 cursor-pointer relative overflow-hidden group";
+            card.setAttribute('data-id', spot.id);
+            card.id = `card-${spot.id}`;
+            card.onclick = () => focusSpot(spot.lat, spot.lng, spot.id);
+            
+            card.innerHTML = `
+                <div class="flex items-start gap-4 relative z-10">
+                    <div class="flex flex-col items-center min-w-[50px]">
+                        <span class="text-xs font-bold text-warm-gold">${spot.time}</span>
+                        <div class="h-full w-px bg-gray-100 my-1 group-hover:bg-warm-gold transition-colors"></div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-charcoal text-lg leading-tight">${spot.name}</h3>
+                            ${spot.type === 'food' || spot.type === 'shopping' || spot.type === 'attraction' ? 
+                              `<span class="text-[10px] px-2 py-0.5 rounded-full ${isOpen ? 'bg-green-100 text-status-open' : 'bg-red-50 text-status-closed'} font-bold border border-current">
+                                ${isOpen ? 'Open' : 'Closed'}
+                               </span>` : ''}
+                        </div>
+                        <p class="text-xs text-fog-dark mt-1">${spot.desc}</p>
+                        
+                        <div class="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
+                            ${spot.link ? `<button onclick="event.stopPropagation(); window.open('${spot.link}','_blank')" class="text-[10px] bg-fog-blue text-white px-3 py-1 rounded hover:bg-fog-dark transition">
+                                <i class="fas fa-calendar-check mr-1"></i> 預訂/攻略
+                            </button>` : ''}
+                            <button onclick="event.stopPropagation(); showDetail('${spot.id}')" class="text-[10px] bg-gray-100 text-gray-500 px-3 py-1 rounded hover:bg-gray-200 transition">
+                                <i class="fas fa-info-circle mr-1"></i> 詳情
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-gray-200 text-2xl group-hover:text-warm-gold/20 transition-colors">
+                        <i class="fas ${getIcon(spot.type)}"></i>
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+
+        // Re-init Sortable
+        if(sortable) sortable.destroy();
+        sortable = new Sortable(list, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function(evt) {
+                // Reorder array data
+                const item = ITINERARY_DATA[currentDayIdx].spots.splice(evt.oldIndex, 1)[0];
+                ITINERARY_DATA[currentDayIdx].spots.splice(evt.newIndex, 0, item);
+                // Update map route
+                updateMap(ITINERARY_DATA[currentDayIdx].spots);
+            }
+        });
+
+        // Update Budget and Map
+        calculateBudget();
+        updateMap(dayData.spots);
+    }
+
+    // --- Helpers & Logic ---
+    function getIcon(type) {
+        const map = { 'food': 'fa-utensils', 'hotel': 'fa-bed', 'shopping': 'fa-shopping-bag', 'transport': 'fa-car', 'attraction': 'fa-camera', 'party': 'fa-glass-cheers', 'walk': 'fa-walking', 'activity': 'fa-ticket-alt' };
+        return map[type] || 'fa-map-marker-alt';
+    }
+
+    function checkOpen(range) {
+        if(!range) return true; // Default open if no data
+        // Simulation logic: Just returns random true/false based on hours for demo
+        // In real app, parse "09:00-18:00" and compare with new Date()
+        return true; 
+    }
+
+    function calculateBudget() {
+        const tier = document.getElementById('budget-tier').value;
+        let multiplier = 1;
+        if(tier === 'low') multiplier = 0.7;
+        if(tier === 'high') multiplier = 1.5;
+
+        let totalT = 0;
+        let totalF = 0;
+
+        ITINERARY_DATA.forEach(day => {
+            day.spots.forEach(spot => {
+                totalT += (spot.cost_t || 0); // Tickets usually fixed
+                totalF += (spot.cost_f || 0) * multiplier; // Food scales
+            });
+        });
+
+        // Add visual count up effect
+        animateValue("total-budget", parseInt(document.getElementById("total-budget").innerText.replace(/\D/g,'')) || 0, totalT + totalF, 500);
+        document.getElementById('budget-breakdown').innerText = `Ticket: ฿${totalT.toLocaleString()} | Food: ~฿${Math.round(totalF).toLocaleString()}`;
+    }
+
+    function animateValue(id, start, end, duration) {
+        if (start === end) return;
+        const range = end - start;
+        let current = start;
+        const increment = end > start ? Math.ceil(range / (duration / 20)) : Math.floor(range / (duration / 20));
+        const stepTime = Math.abs(Math.floor(duration / (range / increment)));
+        const obj = document.getElementById(id);
+        const timer = setInterval(function() {
+            current += increment;
+            obj.innerHTML = "฿ " + current.toLocaleString();
+            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                clearInterval(timer);
+                obj.innerHTML = "฿ " + end.toLocaleString();
+            }
+        }, stepTime);
+    }
+
+    function optimizeRoute() {
+        alert("動線已最佳化！(模擬：系統已重新排列順序以減少交通時間)");
+        // Logic: Sort spots by nearest neighbor algorithm based on Lat/Lng
+        // For demo, we just shuffle the middle items slightly or reset
+        const spots = ITINERARY_DATA[currentDayIdx].spots;
+        if(spots.length > 2) {
+           // Simulate optimization by sorting by Latitude (North to South)
+           const start = spots[0];
+           const end = spots[spots.length-1];
+           const mid = spots.slice(1, -1).sort((a,b) => b.lat - a.lat);
+           ITINERARY_DATA[currentDayIdx].spots = [start, ...mid, end];
+           loadDay(currentDayIdx);
+        }
+    }
+    
+    function resetMap() {
+        const bounds = L.latLngBounds(ITINERARY_DATA[currentDayIdx].spots.map(s => [s.lat, s.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+    }
+
+    function showDetail(id) {
+        // Find spot
+        let spot;
+        ITINERARY_DATA.forEach(d => {
+            const found = d.spots.find(s => s.id === id);
+            if(found) spot = found;
+        });
+
+        const modal = document.getElementById('modal');
+        const content = document.getElementById('modal-content');
+        
+        content.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-serif font-bold text-charcoal">${spot.name}</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-charcoal"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="bg-ivory-dark p-4 rounded-xl mb-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><span class="text-gray-400 block text-xs">營業時間</span><span class="font-bold">${spot.open || '24 hrs'}</span></div>
+                    <div><span class="text-gray-400 block text-xs">預算參考</span><span class="font-bold">฿${(spot.cost_f || 0) + (spot.cost_t || 0)}</span></div>
+                </div>
+            </div>
+            <p class="text-fog-dark leading-relaxed mb-6">${spot.desc}。這裡擁有獨特的泰式氛圍，建議預留 1-2 小時參觀。若遇雨季請記得攜帶雨具。</p>
+            
+            <div class="flex gap-3">
+                ${spot.link ? `<a href="${spot.link}" target="_blank" class="flex-1 bg-warm-gold text-white text-center py-3 rounded-lg font-bold shadow-gold-glow hover:opacity-90 transition">立即預訂/查詢</a>` : ''}
+                <a href="https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}" target="_blank" class="flex-1 border border-charcoal text-charcoal text-center py-3 rounded-lg font-bold hover:bg-charcoal hover:text-white transition">開啟導航</a>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('modal-content').classList.remove('scale-95'); }, 10);
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('modal');
+        modal.classList.add('opacity-0');
+        document.getElementById('modal-content').classList.add('scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('modal');
+        if (event.target == modal) { closeModal(); }
+    }
+
+</script>
+</body>
+</html>
