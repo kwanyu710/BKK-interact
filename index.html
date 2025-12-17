@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2025 曼谷聖誕跨年 | 泰廢了 Elite Edition (V2)</title>
+    <title>2025 曼谷聖誕跨年 | 泰廢了 Elite Edition (Google Maps V3)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap&libraries=geometry" async defer></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 
     <script>
@@ -51,7 +52,6 @@
 
         /* Map Container */
         #map { height: 100%; width: 100%; z-index: 0; border-radius: 24px; }
-        .leaflet-popup-content-wrapper { border-radius: 12px; font-family: 'Lato', sans-serif; }
         
         /* Card Animations */
         .spot-card { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border-left: 3px solid transparent; }
@@ -154,7 +154,7 @@
 </div>
 
 <script>
-    // --- Data Source (Updated for DMK) ---
+    // --- Data Source ---
     const ITINERARY_DATA = [
         { 
             day: 1, date: "12/23 (二)", title: "抵達曼谷", 
@@ -209,57 +209,72 @@
     let currentDayIdx = 0;
     let map;
     let markers = [];
-    let polyline;
+    let polyline = null;
     let sortable;
 
-    // --- Initialization ---
-    document.addEventListener('DOMContentLoaded', () => {
-        initMap();
+    // --- Google Maps Logic ---
+    function initMap() {
+        const bangkok = { lat: 13.7563, lng: 100.5018 };
+        
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 13,
+            center: bangkok,
+            disableDefaultUI: true, // Elegant clean look
+            zoomControl: true,
+            styles: [
+                {
+                    "featureType": "poi",
+                    "elementType": "labels.icon",
+                    "stylers": [{ "visibility": "off" }] // Hide default POI icons for cleaner map
+                }
+            ]
+        });
+
+        // Initialize App
         renderTabs();
         loadDay(0);
-    });
+    }
 
-    // --- Map Logic (Leaflet) ---
-    function initMap() {
-        // Default center (Bangkok)
-        map = L.map('map', { zoomControl: false }).setView([13.7563, 100.5018], 13);
-        
-        // Elegant Styled Tiles (CartoDB Voyager)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 20
-        }).addTo(map);
-
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+    // Helper to generate SVG marker with number
+    function getSvgMarker(color, number) {
+        const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+          <path fill="${color}" stroke="white" stroke-width="2" d="M16 0C9.37 0 4 5.37 4 12c0 9 12 20 12 20s12-11 12-20c0-6.63-5.37-12-12-12z"/>
+          <text x="16" y="18" font-size="12" font-family="Arial" font-weight="bold" fill="white" text-anchor="middle">${number}</text>
+        </svg>`;
+        return {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+            scaledSize: new google.maps.Size(32, 32),
+            labelOrigin: new google.maps.Point(16, 12)
+        };
     }
 
     function updateMap(spots) {
-        // Clear existing
-        markers.forEach(m => map.removeLayer(m));
-        if (polyline) map.removeLayer(polyline);
+        // Clear existing markers & polyline
+        markers.forEach(m => m.setMap(null));
         markers = [];
+        if (polyline) polyline.setMap(null);
 
-        const latlngs = [];
-        const bounds = L.latLngBounds();
+        const path = [];
+        const bounds = new google.maps.LatLngBounds();
 
         spots.forEach((spot, idx) => {
             if (spot.lat && spot.lng) {
-                // Custom Marker
-                const iconColor = idx === 0 ? '#4CAF50' : (idx === spots.length - 1 ? '#E57373' : '#7B9EB2');
-                const customIcon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background-color:${iconColor}; width:24px; height:24px; border-radius:50%; border:3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:bold;">${idx + 1}</div>`,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                const position = { lat: spot.lat, lng: spot.lng };
+                
+                // Color Logic
+                const color = idx === 0 ? '#4CAF50' : (idx === spots.length - 1 ? '#E57373' : '#7B9EB2');
+                
+                const marker = new google.maps.Marker({
+                    position: position,
+                    map: map,
+                    title: spot.name,
+                    icon: getSvgMarker(color, idx + 1),
+                    animation: google.maps.Animation.DROP
                 });
 
-                const m = L.marker([spot.lat, spot.lng], { icon: customIcon })
-                    .bindPopup(`<div class="text-center"><h3 class="font-bold text-charcoal">${spot.name}</h3><p class="text-xs text-gray-500">${spot.desc}</p></div>`)
-                    .addTo(map);
-                
-                // Add click event to marker to highlight list item
-                m.on('click', () => {
+                // Click event
+                marker.addListener("click", () => {
                     document.querySelectorAll('.spot-card').forEach(el => el.classList.remove('active'));
                     const card = document.querySelector(`[data-id="${spot.id}"]`);
                     if(card) {
@@ -268,32 +283,43 @@
                     }
                 });
 
-                markers.push(m);
-                latlngs.push([spot.lat, spot.lng]);
-                bounds.extend([spot.lat, spot.lng]);
+                markers.push(marker);
+                path.push(position);
+                bounds.extend(position);
             }
         });
 
-        if (latlngs.length > 1) {
-            polyline = L.polyline(latlngs, { color: '#C6A568', weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(map);
+        // Draw Polyline
+        if (path.length > 1) {
+            polyline = new google.maps.Polyline({
+                path: path,
+                geodesic: true,
+                strokeColor: "#C6A568",
+                strokeOpacity: 1.0,
+                strokeWeight: 3,
+                icons: [{
+                    icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, strokeColor: "#C6A568", scale: 2 },
+                    offset: '100%',
+                    repeat: '100px'
+                }],
+                map: map
+            });
             
-            // Calculate simulated distance
-            let dist = 0;
-            for(let i=0; i<latlngs.length-1; i++) {
-                dist += map.distance(latlngs[i], latlngs[i+1]);
-            }
-            document.getElementById('route-distance').innerHTML = `<i class="fas fa-route text-warm-gold mr-1"></i> ${(dist/1000).toFixed(1)} km • ~${Math.round(dist/1000 * 5 + 10)} min drive`;
+            // Calculate Distance (Geometry Lib)
+            const dist = google.maps.geometry.spherical.computeLength(path);
+            document.getElementById('route-distance').innerHTML = `<i class="fas fa-route text-warm-gold mr-1"></i> ${(dist/1000).toFixed(1)} km`;
         } else {
              document.getElementById('route-distance').innerText = "單點行程";
         }
 
-        if (latlngs.length > 0) {
-            map.fitBounds(bounds, { padding: [50, 50] });
+        if (path.length > 0) {
+            map.fitBounds(bounds);
         }
     }
 
     function focusSpot(lat, lng, id) {
-        map.flyTo([lat, lng], 15, { duration: 1.5 });
+        map.panTo({ lat, lng });
+        map.setZoom(16);
         document.querySelectorAll('.spot-card').forEach(el => el.classList.remove('active'));
         document.getElementById(`card-${id}`).classList.add('active');
     }
@@ -376,7 +402,7 @@
 
         // Update Budget and Map
         calculateBudget();
-        updateMap(dayData.spots);
+        if(map) updateMap(dayData.spots); // Ensure map is ready
     }
 
     // --- Helpers & Logic ---
@@ -385,12 +411,7 @@
         return map[type] || 'fa-map-marker-alt';
     }
 
-    function checkOpen(range) {
-        if(!range) return true; // Default open if no data
-        // Simulation logic: Just returns random true/false based on hours for demo
-        // In real app, parse "09:00-18:00" and compare with new Date()
-        return true; 
-    }
+    function checkOpen(range) { return true; }
 
     function calculateBudget() {
         const tier = document.getElementById('budget-tier').value;
@@ -403,12 +424,11 @@
 
         ITINERARY_DATA.forEach(day => {
             day.spots.forEach(spot => {
-                totalT += (spot.cost_t || 0); // Tickets usually fixed
-                totalF += (spot.cost_f || 0) * multiplier; // Food scales
+                totalT += (spot.cost_t || 0); 
+                totalF += (spot.cost_f || 0) * multiplier;
             });
         });
 
-        // Add visual count up effect
         animateValue("total-budget", parseInt(document.getElementById("total-budget").innerText.replace(/\D/g,'')) || 0, totalT + totalF, 500);
         document.getElementById('budget-breakdown').innerText = `Ticket: ฿${totalT.toLocaleString()} | Food: ~฿${Math.round(totalF).toLocaleString()}`;
     }
@@ -432,11 +452,8 @@
 
     function optimizeRoute() {
         alert("動線已最佳化！(模擬：系統已重新排列順序以減少交通時間)");
-        // Logic: Sort spots by nearest neighbor algorithm based on Lat/Lng
-        // For demo, we just shuffle the middle items slightly or reset
         const spots = ITINERARY_DATA[currentDayIdx].spots;
         if(spots.length > 2) {
-           // Simulate optimization by sorting by Latitude (North to South)
            const start = spots[0];
            const end = spots[spots.length-1];
            const mid = spots.slice(1, -1).sort((a,b) => b.lat - a.lat);
@@ -446,17 +463,14 @@
     }
     
     function resetMap() {
-        const bounds = L.latLngBounds(ITINERARY_DATA[currentDayIdx].spots.map(s => [s.lat, s.lng]));
-        map.fitBounds(bounds, { padding: [50, 50] });
+        const bounds = new google.maps.LatLngBounds();
+        ITINERARY_DATA[currentDayIdx].spots.forEach(s => bounds.extend({lat: s.lat, lng: s.lng}));
+        map.fitBounds(bounds);
     }
 
     function showDetail(id) {
-        // Find spot
         let spot;
-        ITINERARY_DATA.forEach(d => {
-            const found = d.spots.find(s => s.id === id);
-            if(found) spot = found;
-        });
+        ITINERARY_DATA.forEach(d => { const found = d.spots.find(s => s.id === id); if(found) spot = found; });
 
         const modal = document.getElementById('modal');
         const content = document.getElementById('modal-content');
@@ -472,11 +486,10 @@
                     <div><span class="text-gray-400 block text-xs">預算參考</span><span class="font-bold">฿${(spot.cost_f || 0) + (spot.cost_t || 0)}</span></div>
                 </div>
             </div>
-            <p class="text-fog-dark leading-relaxed mb-6">${spot.desc}。這裡擁有獨特的泰式氛圍，建議預留 1-2 小時參觀。若遇雨季請記得攜帶雨具。</p>
-            
+            <p class="text-fog-dark leading-relaxed mb-6">${spot.desc}。</p>
             <div class="flex gap-3">
                 ${spot.link ? `<a href="${spot.link}" target="_blank" class="flex-1 bg-warm-gold text-white text-center py-3 rounded-lg font-bold shadow-gold-glow hover:opacity-90 transition">立即預訂/查詢</a>` : ''}
-                <a href="https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}" target="_blank" class="flex-1 border border-charcoal text-charcoal text-center py-3 rounded-lg font-bold hover:bg-charcoal hover:text-white transition">開啟導航</a>
+                <a href="https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}" target="_blank" class="flex-1 border border-charcoal text-charcoal text-center py-3 rounded-lg font-bold hover:bg-charcoal hover:text-white transition">開啟 Google 導航</a>
             </div>
         `;
         
@@ -496,7 +509,6 @@
         const modal = document.getElementById('modal');
         if (event.target == modal) { closeModal(); }
     }
-
 </script>
 </body>
 </html>
